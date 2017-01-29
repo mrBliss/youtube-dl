@@ -60,20 +60,7 @@ class CanvasIE(InfoExtractor):
         'only_matching': True,
     }]
 
-    def _real_extract(self, url):
-        mobj = re.match(self._VALID_URL, url)
-        site_id, display_id = mobj.group('site_id'), mobj.group('id')
-
-        webpage = self._download_webpage(url, display_id)
-
-        title = (self._search_regex(
-            r'<h1[^>]+class="video__body__header__title"[^>]*>(.+?)</h1>',
-            webpage, 'title', default=None) or self._og_search_title(
-            webpage)).strip()
-
-        video_id = self._html_search_regex(
-            r'data-video=(["\'])(?P<id>(?:(?!\1).)+)\1', webpage, 'video id', group='id')
-
+    def _extract_info(self, site_id, video_id, display_id, title, description):
         data = self._download_json(
             'https://mediazone.vrt.be/api/v1/%s/assets/%s'
             % (site_id, video_id), display_id)
@@ -112,9 +99,27 @@ class CanvasIE(InfoExtractor):
             'id': video_id,
             'display_id': display_id,
             'title': title,
-            'description': self._og_search_description(webpage),
+            'description': description,
             'formats': formats,
             'duration': float_or_none(data.get('duration'), 1000),
             'thumbnail': data.get('posterImageUrl'),
             'subtitles': subtitles,
         }
+
+    def _real_extract(self, url):
+        mobj = re.match(self._VALID_URL, url)
+        site_id, display_id = mobj.group('site_id'), mobj.group('id')
+
+        webpage = self._download_webpage(url, display_id)
+
+        title = (self._search_regex(
+            r'<h1[^>]+class="video__body__header__title"[^>]*>(.+?)</h1>',
+            webpage, 'title', default=None) or self._og_search_title(
+            webpage)).strip()
+
+        video_id = self._html_search_regex(
+            r'data-video=(["\'])(?P<id>(?:(?!\1).)+)\1', webpage, 'video id', group='id')
+
+        return self._extract_info(
+            site_id, video_id, display_id, title,
+            self._og_search_description(webpage))
