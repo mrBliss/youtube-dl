@@ -123,3 +123,47 @@ class CanvasIE(InfoExtractor):
         return self._extract_info(
             site_id, video_id, display_id, title,
             self._og_search_description(webpage))
+
+
+class VrtNUIE(CanvasIE):
+    _VALID_URL = r'https?://(?:www\.)?vrt\.be/vrtnu/(?:[^/]+/)*(?P<id>[^/?#&]+)'
+    _TESTS = [
+        {
+            'url': 'https://www.vrt.be/vrtnu/a-z/beau-sejour/1/beau-sejour-s1a4-de-opening/',
+            'info_dict': {
+                'id': 'md-ast-77a81e35-70ad-4d2e-bc67-19df59ecde34_1484834606610',
+                'ext': 'mp4',
+                'title': 'De opening',
+                'description': 'md5:860de446d8d9c0c07fd728332054bd63',
+                'duration': 2927050,
+                'thumbnail': r're:^https?://.*\.jpg$'
+            },
+            'skip': 'This video is only available for registered users'
+        }
+    ]
+
+    def _real_extract(self, url):
+        mobj = re.match(self._VALID_URL, url)
+        display_id = mobj.group('id')
+
+        webpage = self._download_webpage(url, display_id)
+
+        title = self._search_regex(
+            r'<h1 class="content__heading">(.+?)</h1>',
+            webpage, 'title', default=None, flags=(re.M | re.S)).strip()
+
+        description = self._html_search_regex(
+            r'<div class="content__description">(.+?)</div>',
+            webpage, 'description', default=None, flags=(re.M | re.S))
+
+        # If there's a ? or a # in the URL, remove them and everything after
+        clean_url = url.split('?')[0].split('#')[0].strip('/')
+        securevideo_url = clean_url + '.securevideo.json'
+
+        json = self._download_json(securevideo_url, display_id)
+        # There is only one entry, but with an unknown key, so just get the
+        # first one
+        video_id = list(json.values())[0].get('mzid')
+
+        return self._extract_info(
+            "vrtvideo", video_id, display_id, title, description)
