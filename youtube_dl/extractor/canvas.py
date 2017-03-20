@@ -60,7 +60,7 @@ class CanvasIE(InfoExtractor):
         'only_matching': True,
     }]
 
-    def _extract_info(self, site_id, video_id, display_id, title, description):
+    def _extract_info(self, site_id, video_id, display_id):
         data = self._download_json(
             'https://mediazone.vrt.be/api/v1/%s/assets/%s'
             % (site_id, video_id), display_id)
@@ -98,8 +98,6 @@ class CanvasIE(InfoExtractor):
         return {
             'id': video_id,
             'display_id': display_id,
-            'title': title,
-            'description': description,
             'formats': formats,
             'duration': float_or_none(data.get('duration'), 1000),
             'thumbnail': data.get('posterImageUrl'),
@@ -117,12 +115,18 @@ class CanvasIE(InfoExtractor):
             webpage, 'title', default=None) or self._og_search_title(
             webpage)).strip()
 
-        video_id = self._html_search_regex(
-            r'data-video=(["\'])(?P<id>(?:(?!\1).)+)\1', webpage, 'video id', group='id')
+        description = self._og_search_description(webpage)
 
-        return self._extract_info(
-            site_id, video_id, display_id, title,
-            self._og_search_description(webpage))
+        video_id = self._html_search_regex(
+            r'data-video=(["\'])(?P<id>(?:(?!\1).)+)\1', webpage, 'video id',
+            group='id')
+
+        info = self._extract_info(site_id, video_id, display_id)
+        info.update({
+            'title': title,
+            'description': description,
+        })
+        return info
 
 
 class VrtNUIE(CanvasIE):
@@ -165,5 +169,9 @@ class VrtNUIE(CanvasIE):
         # first one
         video_id = list(json.values())[0].get('mzid')
 
-        return self._extract_info(
-            "vrtvideo", video_id, display_id, title, description)
+        info = self._extract_info("vrtvideo", video_id, display_id)
+        info.update({
+            'title': title,
+            'description': description,
+        })
+        return info
