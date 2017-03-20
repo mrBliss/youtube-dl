@@ -207,7 +207,7 @@ class VrtNUIE(CanvasIE):
         auth_info_js = self._search_regex(
             r'DUMMY\(({.+})\);', saved_response, 'auth_info_js',
             flags=(re.M | re.S))
-        auth_info = self._parse_json(auth_info_js, None, 'auth_info')
+        auth_info = self._parse_json(auth_info_js, None, None, 'auth_info')
         login_token = auth_info['sessionInfo']['login_token']
         token_cookie = self._MAGIC_COOKIE_FORMAT % login_token
 
