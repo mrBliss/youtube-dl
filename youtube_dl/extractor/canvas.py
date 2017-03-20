@@ -1,12 +1,15 @@
 from __future__ import unicode_literals
 
 import re
+import json
 
 from .common import InfoExtractor
 from ..utils import (
+    ExtractorError,
     float_or_none,
     int_or_none,
     parse_iso8601,
+    urlencode_postdata,
 )
 
 
@@ -137,18 +140,94 @@ class VrtNUIE(CanvasIE):
     _VALID_URL = r'https?://(?:www\.)?vrt\.be/vrtnu/(?:[^/]+/)*(?P<id>[^/?#&]+)'
     _TESTS = [
         {
-            'url': 'https://www.vrt.be/vrtnu/a-z/beau-sejour/1/beau-sejour-s1a4-de-opening/',
+            'url': 'https://www.vrt.be/vrtnu/a-z/trapped/1/trapped-s1a4/',
             'info_dict': {
-                'id': 'md-ast-77a81e35-70ad-4d2e-bc67-19df59ecde34_1484834606610',
+                'id': 'md-ast-01e7d193-63ab-4d89-9ab1-96b23315ebec_1489574042173',
                 'ext': 'mp4',
-                'title': 'De opening',
-                'description': 'md5:860de446d8d9c0c07fd728332054bd63',
-                'duration': 2927050,
+                'title': 'Trapped',
+                'description': 'md5:6f4f779d176252f887fdd938910d6094',
+                'duration': 3011.17,
                 'thumbnail': r're:^https?://.*\.jpg$'
             },
             'skip': 'This video is only available for registered users'
         }
     ]
+    _NETRC_MACHINE = 'vrtnu'
+    _APIKEY = '3_0Z2HujMtiWq_pkAjgnS2Md2E11a1AwZjYiBETtwNE-EoEHDINgtnvcAOpNgmrVGy'
+    _CONTEXT_ID = 'R1070628488'
+    _MAGIC_COOKIE_FORMAT = (
+        '__gfp_64b=YGF3dI515OCJDETbSYwx8azLJ7k.'
+        'g8crxK9NOWzCjb7.E7; '
+        'glt_3_qhEcPa5JGFROVwu5SWKqJ4mVOIkwlFNMSKwzPDAh8QZOtHqu6L4nD5Q7lk0eXOOG'
+        '=%s'  # Login token goes here
+    )
+
+    def _real_initialize(self):
+        self._login()
+
+    def _login(self):
+        username, password = self._get_login_info()
+        if username is None:
+            self.raise_login_required()
+
+        auth_data = {
+            'APIKey': self._APIKEY,
+            'targetEnv': 'jssdk',
+            'loginID': username,
+            'password': password,
+            'authMode': 'cookie',
+            'context': self._CONTEXT_ID,
+        }
+
+        self._request_webpage(
+            'https://accounts.eu1.gigya.com/accounts.login', None,
+            note='Logging in', errnote='Unable to log in',
+            data=urlencode_postdata(auth_data),
+            query={
+                'context': self._CONTEXT_ID,
+                'saveResponseID': self._CONTEXT_ID,
+            })
+
+        gigya_cookies = self._get_cookies('https://accounts.eu1.gigya.com')
+        if 'ucid' not in gigya_cookies or 'gmid' not in gigya_cookies:
+            raise ExtractorError('Unable to login: missing cookies',
+                                 expected=True)
+
+        saved_response = self._download_webpage(
+            'https://accounts.eu1.gigya.com/socialize.getSavedResponse', None,
+            note='Getting login response', errnote='Unable to log in',
+            query={
+                'APIKey': self._APIKEY,
+                'saveResponseID': self._CONTEXT_ID,
+                'context': self._CONTEXT_ID,
+                'format': 'jsonp',
+                'callback': 'DUMMY',
+            })
+
+        auth_info_js = self._search_regex(
+            r'DUMMY\(({.+})\);', saved_response, 'auth_info_js',
+            flags=(re.M | re.S))
+        auth_info = self._parse_json(auth_info_js, None, 'auth_info')
+        login_token = auth_info['sessionInfo']['login_token']
+        token_cookie = self._MAGIC_COOKIE_FORMAT % login_token
+
+        # When requesting a token, no actual token is returne, but the
+        # necessary cookies are set.
+        self._request_webpage(
+            'https://token.vrt.be',
+            None, note='Requesting a token', errnote='Could not get a token',
+            headers={
+                'Content-Type': 'application/json',
+                'Cookie': token_cookie,
+                'Origin': 'https://www.vrt.be',
+                'Referer': 'https://www.vrt.be/vrtnu/a-z/',
+            },
+            data=json.dumps({
+                'uid': auth_info['UID'],
+                'uidsig': auth_info['UIDSignature'],
+                'ts': auth_info['signatureTimestamp'],
+                'email': auth_info['profile']['email'],
+            }).encode('utf-8'))
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
