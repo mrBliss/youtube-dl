@@ -197,7 +197,7 @@ class VrtNUIE(CanvasIE):
         # first one
         video_id = list(json.values())[0].get('mzid')
 
-        info = self._extract_info("vrtvideo", video_id, display_id)
+        info = self._extract_info('vrtvideo', video_id, display_id)
         info.update({
             'title': title,
             'description': description,
