@@ -3,7 +3,11 @@ from __future__ import unicode_literals
 import re
 
 from .common import InfoExtractor
-from ..utils import float_or_none
+from ..utils import (
+    float_or_none,
+    int_or_none,
+    parse_iso8601,
+)
 
 
 class CanvasIE(InfoExtractor):
@@ -160,6 +164,30 @@ class VrtNUIE(CanvasIE):
             r'<div class="content__description">(.+?)</div>',
             webpage, 'description', default=None, flags=(re.M | re.S))
 
+        season = self._html_search_regex(
+            [r'''(?xms)<div\ class="tabs__tab\ tabs__tab--active">\s*
+                    <span>seizoen\ (.+?)</span>\s*
+                </div>''',
+             r'<option value="seizoen (.+?)" data-href="[^"]+?" selected>'],
+            webpage, 'season', default=None)
+
+        season_number = int_or_none(season)
+
+        # Sometimes the season is the year, so don't use it as the season number
+        if season_number and season_number > 1000:
+            season_number = None
+
+        episode_number = int_or_none(self._html_search_regex(
+            r'''<div\ class="content__episode">\s*
+                    <abbr\ title="aflevering">afl</abbr>\s*<span>(\d+)</span>
+                </div>''',
+            webpage, 'episode_number', default=None,
+            flags=(re.X | re.M | re.S)))
+
+        release_date = parse_iso8601(self._html_search_regex(
+            r'<div class="content__broadcastdate">\s*<time\ datetime="(.+?)"',
+            webpage, 'release_date', default=None, flags=(re.M | re.S)))
+
         # If there's a ? or a # in the URL, remove them and everything after
         clean_url = url.split('?')[0].split('#')[0].strip('/')
         securevideo_url = clean_url + '.securevideo.json'
@@ -173,5 +201,9 @@ class VrtNUIE(CanvasIE):
         info.update({
             'title': title,
             'description': description,
+            'season': season,
+            'season_number': season_number,
+            'episode_number': episode_number,
+            'release_date': release_date,
         })
         return info
