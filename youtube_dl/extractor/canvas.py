@@ -203,7 +203,7 @@ class VrtNUIE(CanvasIE):
             flags=(re.M | re.S))
         auth_info = self._parse_json(auth_info_js, None, None, 'auth_info')
 
-        # When requesting a token, no actual token is returne, but the
+        # When requesting a token, no actual token is returned, but the
         # necessary cookies are set.
         self._request_webpage(
             'https://token.vrt.be',
