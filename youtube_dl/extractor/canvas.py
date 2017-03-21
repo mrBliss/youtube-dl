@@ -155,12 +155,6 @@ class VrtNUIE(CanvasIE):
     _NETRC_MACHINE = 'vrtnu'
     _APIKEY = '3_0Z2HujMtiWq_pkAjgnS2Md2E11a1AwZjYiBETtwNE-EoEHDINgtnvcAOpNgmrVGy'
     _CONTEXT_ID = 'R1070628488'
-    _MAGIC_COOKIE_FORMAT = (
-        '__gfp_64b=YGF3dI515OCJDETbSYwx8azLJ7k.'
-        'g8crxK9NOWzCjb7.E7; '
-        'glt_3_qhEcPa5JGFROVwu5SWKqJ4mVOIkwlFNMSKwzPDAh8QZOtHqu6L4nD5Q7lk0eXOOG'
-        '=%s'  # Login token goes here
-    )
 
     def _real_initialize(self):
         self._login()
@@ -208,8 +202,6 @@ class VrtNUIE(CanvasIE):
             r'DUMMY\(({.+})\);', saved_response, 'auth_info_js',
             flags=(re.M | re.S))
         auth_info = self._parse_json(auth_info_js, None, None, 'auth_info')
-        login_token = auth_info['sessionInfo']['login_token']
-        token_cookie = self._MAGIC_COOKIE_FORMAT % login_token
 
         # When requesting a token, no actual token is returne, but the
         # necessary cookies are set.
@@ -218,7 +210,6 @@ class VrtNUIE(CanvasIE):
             None, note='Requesting a token', errnote='Could not get a token',
             headers={
                 'Content-Type': 'application/json',
-                'Cookie': token_cookie,
                 'Origin': 'https://www.vrt.be',
                 'Referer': 'https://www.vrt.be/vrtnu/a-z/',
             },
