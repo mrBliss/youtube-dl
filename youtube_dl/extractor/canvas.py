@@ -226,7 +226,7 @@ class VrtNUIE(CanvasIE):
 
         webpage = self._download_webpage(url, display_id)
 
-        title = self._search_regex(
+        title = self._html_search_regex(
             r'<h1 class="content__heading">(.+?)</h1>',
             webpage, 'title', default=None, flags=(re.M | re.S)).strip()
 
