@@ -170,38 +170,17 @@ class VrtNUIE(CanvasIE):
             'loginID': username,
             'password': password,
             'authMode': 'cookie',
-            'context': self._CONTEXT_ID,
         }
 
-        self._request_webpage(
+        auth_info = self._download_json(
             'https://accounts.eu1.gigya.com/accounts.login', None,
             note='Logging in', errnote='Unable to log in',
-            data=urlencode_postdata(auth_data),
-            query={
-                'context': self._CONTEXT_ID,
-                'saveResponseID': self._CONTEXT_ID,
-            })
+            data=urlencode_postdata(auth_data))
 
-        gigya_cookies = self._get_cookies('https://accounts.eu1.gigya.com')
-        if 'ucid' not in gigya_cookies or 'gmid' not in gigya_cookies:
-            raise ExtractorError('Unable to login: missing cookies',
-                                 expected=True)
-
-        saved_response = self._download_webpage(
-            'https://accounts.eu1.gigya.com/socialize.getSavedResponse', None,
-            note='Getting login response', errnote='Unable to log in',
-            query={
-                'APIKey': self._APIKEY,
-                'saveResponseID': self._CONTEXT_ID,
-                'context': self._CONTEXT_ID,
-                'format': 'jsonp',
-                'callback': 'DUMMY',
-            })
-
-        auth_info_js = self._search_regex(
-            r'DUMMY\(({.+})\);', saved_response, 'auth_info_js',
-            flags=(re.M | re.S))
-        auth_info = self._parse_json(auth_info_js, None, None, 'auth_info')
+        error_message = auth_info.get('errorDetails') or auth_info.get('errorMessage')
+        if error_message:
+            raise ExtractorError(
+                'Unable to login: %s' % error_message, expected=True)
 
         # When requesting a token, no actual token is returned, but the
         # necessary cookies are set.
@@ -210,8 +189,7 @@ class VrtNUIE(CanvasIE):
             None, note='Requesting a token', errnote='Could not get a token',
             headers={
                 'Content-Type': 'application/json',
-                'Origin': 'https://www.vrt.be',
-                'Referer': 'https://www.vrt.be/vrtnu/a-z/',
+                'Referer': 'https://www.vrt.be/vrtnu/',
             },
             data=json.dumps({
                 'uid': auth_info['UID'],
