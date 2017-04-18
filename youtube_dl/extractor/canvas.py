@@ -199,42 +199,36 @@ class VrtNUIE(CanvasIE):
             }).encode('utf-8'))
 
     def _real_extract(self, url):
-        mobj = re.match(self._VALID_URL, url)
-        display_id = mobj.group('id')
+        display_id = self._match_id(url)
 
         webpage = self._download_webpage(url, display_id)
 
         title = self._html_search_regex(
-            r'<h1 class="content__heading">(.+?)</h1>',
-            webpage, 'title', default=None, flags=(re.M | re.S)).strip()
+            r'(?ms)<h1 class="content__heading">(.+?)</h1>',
+            webpage, 'title').strip()
 
         description = self._html_search_regex(
-            r'<div class="content__description">(.+?)</div>',
-            webpage, 'description', default=None, flags=(re.M | re.S))
+            r'(?ms)<div class="content__description">(.+?)</div>',
+            webpage, 'description', default=None)
 
         season = self._html_search_regex(
             [r'''(?xms)<div\ class="tabs__tab\ tabs__tab--active">\s*
                     <span>seizoen\ (.+?)</span>\s*
                 </div>''',
-             r'<option value="seizoen (.+?)" data-href="[^"]+?" selected>'],
+             r'<option value="seizoen (\d{1,3})" data-href="[^"]+?" selected>'],
             webpage, 'season', default=None)
 
         season_number = int_or_none(season)
 
-        # Sometimes the season is the year, so don't use it as the season number
-        if season_number and season_number > 1000:
-            season_number = None
-
         episode_number = int_or_none(self._html_search_regex(
-            r'''<div\ class="content__episode">\s*
+            r'''(?xms)<div\ class="content__episode">\s*
                     <abbr\ title="aflevering">afl</abbr>\s*<span>(\d+)</span>
                 </div>''',
-            webpage, 'episode_number', default=None,
-            flags=(re.X | re.M | re.S)))
+            webpage, 'episode_number', default=None))
 
         release_date = parse_iso8601(self._html_search_regex(
-            r'<div class="content__broadcastdate">\s*<time\ datetime="(.+?)"',
-            webpage, 'release_date', default=None, flags=(re.M | re.S)))
+            r'(?ms)<div class="content__broadcastdate">\s*<time\ datetime="(.+?)"',
+            webpage, 'release_date', default=None))
 
         # If there's a ? or a # in the URL, remove them and everything after
         clean_url = url.split('?')[0].split('#')[0].strip('/')
