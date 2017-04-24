@@ -235,9 +235,14 @@ class VrtNUIE(CanvasIE):
         securevideo_url = clean_url + '.securevideo.json'
 
         json = self._download_json(securevideo_url, display_id)
-        # There is only one entry, but with an unknown key, so just get the
-        # first one
-        video_id = list(json.values())[0].get('mzid')
+        # We are dealing with a '../<show>.relevant' URL
+        redirect_url = json.get('url')
+        if redirect_url:
+            return self._real_extract('https:' + redirect_url)
+        else:
+            # There is only one entry, but with an unknown key, so just get
+            # the first one
+            video_id = list(json.values())[0].get('mzid')
 
         info = self._extract_info('vrtvideo', video_id, display_id)
         info.update({
