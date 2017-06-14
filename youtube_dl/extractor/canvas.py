@@ -4,6 +4,7 @@ import re
 import json
 
 from .common import InfoExtractor
+from ..compat import compat_HTTPError
 from ..utils import (
     ExtractorError,
     float_or_none,
@@ -187,19 +188,31 @@ class VrtNUIE(CanvasIE):
 
         # When requesting a token, no actual token is returned, but the
         # necessary cookies are set.
-        self._request_webpage(
-            'https://token.vrt.be',
-            None, note='Requesting a token', errnote='Could not get a token',
-            headers={
-                'Content-Type': 'application/json',
-                'Referer': 'https://www.vrt.be/vrtnu/',
-            },
-            data=json.dumps({
-                'uid': auth_info['UID'],
-                'uidsig': auth_info['UIDSignature'],
-                'ts': auth_info['signatureTimestamp'],
-                'email': auth_info['profile']['email'],
-            }).encode('utf-8'))
+        login_attempt = 1
+        while login_attempt <= 3:
+            try:
+                self._request_webpage(
+                    'https://token.vrt.be',
+                    None, note='Requesting a token', errnote='Could not get a token',
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Referer': 'https://www.vrt.be/vrtnu/',
+                    },
+                    data=json.dumps({
+                        'uid': auth_info['UID'],
+                        'uidsig': auth_info['UIDSignature'],
+                        'ts': auth_info['signatureTimestamp'],
+                        'email': auth_info['profile']['email'],
+                    }).encode('utf-8'))
+            except ExtractorError as e:
+                if isinstance(e.cause, compat_HTTPError) and e.cause.code == 401:
+                    login_attempt += 1
+                    self.report_warning('Authentication failed')
+                    self._sleep(1, None, msg_template='Waiting for %(timeout)s seconds before trying again')
+                else:
+                    raise e
+            else:
+                break
 
     def _real_extract(self, url):
         display_id = self._match_id(url)
