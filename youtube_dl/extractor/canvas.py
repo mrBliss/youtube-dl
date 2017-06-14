@@ -140,14 +140,17 @@ class VrtNUIE(CanvasIE):
     _VALID_URL = r'https?://(?:www\.)?vrt\.be/vrtnu/(?:[^/]+/)*(?P<id>[^/?#&]+)'
     _TESTS = [
         {
-            'url': 'https://www.vrt.be/vrtnu/a-z/trapped/1/trapped-s1a4/',
+            'url': 'https://www.vrt.be/vrtnu/a-z/postbus-x/1/postbus-x-s1a1/',
             'info_dict': {
-                'id': 'md-ast-01e7d193-63ab-4d89-9ab1-96b23315ebec_1489574042173',
+                'id': 'mz-ast-f4fd85b0-1d7a-4ba0-aa78-8966c65e0c53_1466500039976',
                 'ext': 'mp4',
-                'title': 'Trapped',
-                'description': 'md5:6f4f779d176252f887fdd938910d6094',
-                'duration': 3011.17,
-                'thumbnail': r're:^https?://.*\.jpg$'
+                'title': 'De zwarte weduwe',
+                'description': 'md5:d90c21dced7db869a85db89a623998d4',
+                'duration': 1457.04,
+                'thumbnail': r're:^https?://.*\.jpg$',
+                'season': '1',
+                'season_number': 1,
+                'episode_number': 1,
             },
             'skip': 'This video is only available for registered users'
         }
