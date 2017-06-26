@@ -158,7 +158,7 @@ class VrtNUIE(CanvasIE):
     ]
     _NETRC_MACHINE = 'vrtnu'
     _APIKEY = '3_0Z2HujMtiWq_pkAjgnS2Md2E11a1AwZjYiBETtwNE-EoEHDINgtnvcAOpNgmrVGy'
-    _CONTEXT_ID = 'R1070628488'
+    _CONTEXT_ID = 'R3595707040'
 
     def _real_initialize(self):
         self._login()
