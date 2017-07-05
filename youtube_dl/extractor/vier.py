@@ -8,7 +8,7 @@ from .common import InfoExtractor
 from ..utils import (
     urlencode_postdata,
     int_or_none,
-    unified_strdate,
+    remove_end,
 )
 
 
@@ -31,6 +31,7 @@ class VierIE(InfoExtractor):
                         )
                     '''
     _NETRC_MACHINE = 'vier'
+    # TODO update
     _TESTS = [{
         'url': 'http://www.vier.be/planb/videos/het-wordt-warm-de-moestuin/16129',
         'md5': 'e4ae2054a6b040ef1e289e20d111b46e',
@@ -112,6 +113,8 @@ class VierIE(InfoExtractor):
         self._logged_in = False
 
     def _login(self, site):
+        return
+        # TODO redo
         username, password = self._get_login_info()
         if username is None or password is None:
             return
@@ -146,42 +149,35 @@ class VierIE(InfoExtractor):
 
         webpage = self._download_webpage(url, display_id)
 
-        if r'id="user-login"' in webpage:
-            self.report_warning(
-                'Log in to extract metadata', video_id=display_id)
-            webpage = self._download_webpage(
-                'http://www.%s.be/video/v3/embed/%s' % (site, video_id),
-                display_id)
-
         video_id = self._search_regex(
-            [r'data-nid="(\d+)"', r'"nid"\s*:\s*"(\d+)"'],
-            webpage, 'video id', default=video_id or display_id)
+            r'data-file="([a-f0-9-]+)"', webpage, 'video id')
 
-        playlist_url = self._search_regex(
-            r'data-file=(["\'])(?P<url>(?:https?:)?//[^/]+/.+?\.m3u8.*?)\1',
-            webpage, 'm3u8 url', default=None, group='url')
+        authorization_code = "eyJraWQiOiJCSHZsMjdjNzdGR2J5YWNyTk8xXC9yWXBPTjlzMFFPbjhtUTdzQnA5eCtvbz0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxYzI2MThiNy1lN2VhLTRlN2EtYmRjMy1jNTJmNzUyOWRkM2MiLCJ3ZWJzaXRlIjoie1widXJsXCI6XCJodHRwOlwvXC93d3cudmllci5iZVwvdmlkZW9cL2RlLXNvbGxpY2l0YXRpZVwvMjAxN1wvZGUtc29sbGljaXRhdGllLWFmbGV2ZXJpbmctOFwiLFwic2l0ZU5hbWVcIjpcIlZJRVJcIixcInRpdGxlXCI6XCJEZSBTb2xsaWNpdGF0aWUgLSBBZmxldmVyaW5nIDhcIixcImFjdGlvblwiOlwid2F0Y2hcIn0iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYmlydGhkYXRlIjoiMTJcLzEyXC8xOTEyIiwiZ2VuZGVyIjoibSIsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX2RWaVNzS001WSIsImN1c3RvbTpwb3N0YWxfY29kZSI6IjEwNDMiLCJjb2duaXRvOnVzZXJuYW1lIjoibWVqbzJqYXh4OWo0cW1tOTh2IiwiYXVkIjoiNnMxaDg1MXM4dXBsY281aDZtcWgxamFjOG0iLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTUxMjQwMzUxNSwiZXhwIjoxNTEyNDA3MTE1LCJpYXQiOjE1MTI0MDM1MTUsImVtYWlsIjoiZGV3aW5hbnQrdmllcjJAZ21haWwuY29tIn0.TwMjDcJTIAj1BcNkTm9h1y7NpW1Srsvi0ngAl9LC3XRtBZcigcm8Zl5qsGE1SG8jNoMqS9bWxNNwQ-g_iXe7UVnsyV-OdMluBOodguG4pWC4cRCoNl5Svn--y_v35rJrqy35g16wquCRM21rpBvIMBUw5wyFA_qNIb9tWZeXXxG0ORdVHB9FvPnxXlc0pVuHe-0zMCBZ3U6oFQCpPi0NeiHIx0kFiR3Det6d-QX4FU90j51LGROpjHlIdNv9461o37kX6aOp4zbwLRqGYPokdaufj3w6c0Ajfd2kODEq_yF-dsZEjChrYP93yZZph7osAEGP8UNNnCRq8lACs84D7w"
 
-        if not playlist_url:
-            application = self._search_regex(
-                [r'data-application="([^"]+)"', r'"application"\s*:\s*"([^"]+)"'],
-                webpage, 'application', default=site + '_vod')
-            filename = self._search_regex(
-                [r'data-filename="([^"]+)"', r'"filename"\s*:\s*"([^"]+)"'],
-                webpage, 'filename')
-            playlist_url = 'http://vod.streamcloud.be/%s/_definst_/mp4:%s.mp4/playlist.m3u8' % (application, filename)
+        json = self._download_json(
+            'https://api.viervijfzes.be/content/%s' % video_id,
+            video_id=video_id,
+            headers={'authorization': authorization_code})
+
+        playlist_url = json['video']['S']
+        duration = int_or_none(json['length']['N'])
 
         formats = self._extract_wowza_formats(
             playlist_url, display_id, skip_protocols=['dash'])
         self._sort_formats(formats)
 
-        title = self._og_search_title(webpage, default=display_id)
+        title = remove_end(self._og_search_title(webpage, default=display_id),
+                           " | Vier")
+
         description = self._html_search_regex(
-            r'(?s)<div\b[^>]+\bclass=(["\'])[^>]*?\bfield-type-text-with-summary\b[^>]*?\1[^>]*>.*?<p>(?P<value>.+?)</p>',
+            r'''(?s)<div\b[^>]+\bclass="metadata__description">.+?
+                    <p>(?P<value>.+?)\s*(?:Deze\ aflevering\ is\ te\ bekijken\ tot.+?)?</p>''',
             webpage, 'description', default=None, group='value')
-        thumbnail = self._og_search_thumbnail(webpage, default=None)
-        upload_date = unified_strdate(self._html_search_regex(
-            r'(?s)<div\b[^>]+\bclass=(["\'])[^>]*?\bfield-name-post-date\b[^>]*?\1[^>]*>.*?(?P<value>\d{2}/\d{2}/\d{4})',
-            webpage, 'upload date', default=None, group='value'))
+        thumbnail = self._og_search_property(
+            'image:url', webpage, 'thumbnail URL', fatal=False, default=None)
+        upload_date = int_or_none(self._html_search_regex(
+            r'data-timestamp="(\d+)"',
+            webpage, 'upload_date', default=None))
 
         series = self._search_regex(
             r'data-program=(["\'])(?P<value>(?:(?!\1).)+)\1', webpage,
@@ -201,6 +197,7 @@ class VierIE(InfoExtractor):
             'episode_number': episode_number,
             'tags': tags,
             'formats': formats,
+            'duration': duration,
         }
 
 
