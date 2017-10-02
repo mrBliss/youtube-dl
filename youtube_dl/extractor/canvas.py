@@ -248,7 +248,7 @@ class VrtNUIE(CanvasIE):
 
         # If there's a ? or a # in the URL, remove them and everything after
         clean_url = url.split('?')[0].split('#')[0].strip('/')
-        securevideo_url = clean_url + '.securevideo.json'
+        securevideo_url = clean_url + '.mssecurevideo.json'
 
         json = self._download_json(securevideo_url, display_id)
         # We are dealing with a '../<show>.relevant' URL
@@ -258,7 +258,7 @@ class VrtNUIE(CanvasIE):
         else:
             # There is only one entry, but with an unknown key, so just get
             # the first one
-            video_id = list(json.values())[0].get('mzid')
+            video_id = list(json.values())[0].get('videoid')
 
         info = self._extract_info('vrtvideo', video_id, display_id)
         info.update({
