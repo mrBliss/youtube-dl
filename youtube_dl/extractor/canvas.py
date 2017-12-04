@@ -79,6 +79,10 @@ class CanvasIE(InfoExtractor):
                 if subtitle_url and subtitle.get('type') == 'CLOSED':
                     subtitles.setdefault('nl', []).append({'url': subtitle_url})
 
+        for fmt in formats:
+            if 'textstream' in fmt.get('format_id'):
+                subtitles.setdefault('nl', []).append({'url': fmt.get('url')})
+
         return {
             'id': video_id,
             'display_id': video_id,
