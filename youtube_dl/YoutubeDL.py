@@ -41,6 +41,7 @@ from .compat import (
     compat_urllib_error,
     compat_urllib_request,
     compat_urllib_request_DataHandler,
+    compat_urlparse,
 )
 from .utils import (
     age_restricted,
@@ -1828,6 +1829,63 @@ class YoutubeDL(object):
                         except (OSError, IOError):
                             self.report_error('Cannot write subtitles file ' + sub_filename)
                             return
+                    elif sub_info.get('ext') == 'm3u8':
+                        m3u8_url = sub_info.get('url')
+                        m3u8_doc = ie._download_webpage(m3u8_url, info_dict['id'])
+                        sub_segment_index = 0
+                        offset = 0
+                        next_offset = 0
+                        subtitle_index = 1
+                        sub_filename = subtitles_filename(filename, sub_lang, 'srt')
+
+                        def vtt_timestamp_to_ms(timestamp):
+                            (h, m, s, ms) = re.match(r'(\d{2}):(\d{2}):(\d{2}).(\d{3})', timestamp).groups()
+                            return int(ms) + 1000 * (int(s) + 60 * (int(m) + 60 * int(h)))
+
+                        def ms_to_srt_timestamp(ms):
+                            (h, ms) = divmod(ms, 1000 * 60 * 60)
+                            (m, ms) = divmod(ms, 1000 * 60)
+                            (s, ms) = divmod(ms, 1000)
+                            return '%02d:%02d:%02d,%03d' % (h, m, s, ms)
+
+                        with io.open(encodeFilename(sub_filename), 'w') as sub_file:
+                            for line in m3u8_doc.splitlines():
+                                is_extinf = re.match("^#EXTINF:(\d+(?:\.\d+)?),", line)
+                                if is_extinf:
+                                    next_offset = 1000 * float(is_extinf.group(1))
+                                    continue
+                                elif line.startswith('#') or not line.strip():
+                                    continue
+                                if line.startswith("http"):
+                                    sub_segment_url = line
+                                else:
+                                    sub_segment_url = compat_urlparse.urljoin(m3u8_url, line)
+                                try:
+                                    sub_segment_data = ie._download_webpage(
+                                        sub_segment_url, info_dict['id'], note=False)
+                                    for part in sub_segment_data.split('\n\n'):
+                                        if part.startswith('WEBVTT') or not part.strip():
+                                            continue
+                                        part_lines = part.splitlines()
+                                        (start_vtt, end_vtt) = re.match('([0-9:.,]+) --> ([0-9:.,]+)',
+                                                                        part_lines[0]).groups()
+                                        start = vtt_timestamp_to_ms(start_vtt)
+                                        end = vtt_timestamp_to_ms(end_vtt)
+                                        start += offset
+                                        end += offset
+                                        start_srt = ms_to_srt_timestamp(start)
+                                        end_srt = ms_to_srt_timestamp(end)
+                                        sub_file.write('%d\n' % subtitle_index)
+                                        sub_file.write('%s --> %s\n' % (start_srt, end_srt))
+                                        sub_file.write('%s\n\n' % '\n'.join(part_lines[1:]))
+                                        subtitle_index += 1
+                                    offset += next_offset
+                                except (ExtractorError, IOError, OSError, ValueError) as err:
+                                    self.report_warning('Unable to download subtitle segment for "%s": %s' %
+                                                        (sub_lang, error_to_compat_str(err)))
+                                    continue  # TODO stop downloading segments?
+
+                                sub_segment_index += 1
                     else:
                         try:
                             sub_data = ie._request_webpage(
