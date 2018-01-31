@@ -1800,7 +1800,8 @@ class YoutubeDL(object):
                         m3u8_url = sub_info.get('url')
                         m3u8_doc = ie._download_webpage(m3u8_url, info_dict['id'])
                         sub_segment_index = 0
-                        SEGMENT_DELAY_MS = 1 * 60 * 1000
+                        offset = 0
+                        next_offset = 0
                         subtitle_index = 1
                         sub_filename = subtitles_filename(filename, sub_lang, 'srt')
 
@@ -1816,9 +1817,13 @@ class YoutubeDL(object):
 
                         with io.open(encodeFilename(sub_filename), 'w') as sub_file:
                             for line in m3u8_doc.splitlines():
-                                if line.startswith('#') or not line.strip():
+                                is_extinf = re.match("^#EXTINF:(\d+(?:\.\d+)?),", line)
+                                if is_extinf:
+                                    next_offset = 1000 * float(is_extinf.group(1))
                                     continue
-                                if re.match(r'^https?://', line):
+                                elif line.startswith('#') or not line.strip():
+                                    continue
+                                if line.startswith("http"):
                                     sub_segment_url = line
                                 else:
                                     sub_segment_url = compat_urlparse.urljoin(m3u8_url, line)
@@ -1833,14 +1838,15 @@ class YoutubeDL(object):
                                                                         part_lines[0]).groups()
                                         start = vtt_timestamp_to_ms(start_vtt)
                                         end = vtt_timestamp_to_ms(end_vtt)
-                                        start += sub_segment_index * SEGMENT_DELAY_MS
-                                        end += sub_segment_index * SEGMENT_DELAY_MS
+                                        start += offset
+                                        end += offset
                                         start_srt = ms_to_srt_timestamp(start)
                                         end_srt = ms_to_srt_timestamp(end)
                                         sub_file.write('%d\n' % subtitle_index)
                                         sub_file.write('%s --> %s\n' % (start_srt, end_srt))
                                         sub_file.write('%s\n\n' % '\n'.join(part_lines[1:]))
                                         subtitle_index += 1
+                                    offset += next_offset
                                 except (ExtractorError, IOError, OSError, ValueError) as err:
                                     self.report_warning('Unable to download subtitle segment for "%s": %s' %
                                                         (sub_lang, error_to_compat_str(err)))
