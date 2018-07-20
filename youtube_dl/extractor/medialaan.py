@@ -130,16 +130,17 @@ class MedialaanIE(GigyaBaseIE):
         mobj = re.match(self._VALID_URL, url)
         video_id, site_id = mobj.group('id', 'site_id')
 
+        self._set_cookie('%s.be' % site_id, 'pws', 'functional|analytics')
+
         webpage = self._download_webpage(url, video_id)
 
         config = self._parse_json(
             self._search_regex(
-                r'videoJSConfig\s*=\s*JSON\.parse\(\'({.+?})\'\);',
+                r'dataLayer\s*=\s*\[({.+?})\]',
                 webpage, 'config', default='{}'), video_id,
             transform_source=lambda s: s.replace(
                 '\\\\', '\\').replace(r'\"', '"').replace(r"\'", "'"))
-
-        vod_id = config.get('vodId') or self._search_regex(
+        vod_id = config.get('content').get('metadata').get('vodId') or self._search_regex(
             (r'\\"vodId\\"\s*:\s*\\"(.+?)\\"',
              r'"vodId"\s*:\s*"(.+?)"',
              r'<[^>]+id=["\']vod-(\d+)'),
@@ -190,21 +191,27 @@ class MedialaanIE(GigyaBaseIE):
                     r'"%s"\s*:\s*"([^"]+)' % item, webpage, item,
                     default=None)
 
-            app_id = get('vod', 'app_id') or self._SITE_TO_APP_ID.get(site_id, 'vtm_watch')
+            api_key = get('vod', 'apiKey')
             sso = get('vod', 'gigyaDatabase') or 'vtm-sso'
+            token = self._download_json(
+                'http://user.medialaan.io/user/v1/gigya/request_token',
+                video_id, query={
+                    'uid': self._uid,
+                    'signature': self._uid_signature,
+                    'timestamp': self._signature_timestamp,
+                    'apikey': api_key,
+                    'database': sso,
+                })
 
             data = self._download_json(
-                'http://vod.medialaan.io/api/1.0/item/%s/video' % vod_id,
+                'http://vod.medialaan.io/vod/v2/videos/%s/watch' % vod_id,
                 video_id, query={
-                    'app_id': app_id,
-                    'user_network': sso,
-                    'UID': self._uid,
-                    'UIDSignature': self._uid_signature,
-                    'signatureTimestamp': self._signature_timestamp,
+                    'access_token': token['response'],
+                    'apikey': api_key
                 })
 
             formats = self._extract_m3u8_formats(
-                data['response']['uri'], video_id, entry_protocol='m3u8_native',
+                data['response']['hls-encrypted']['url'], video_id, entry_protocol='m3u8_native',
                 ext='mp4', m3u8_id='hls')
 
             self._sort_formats(formats)
@@ -214,7 +221,6 @@ class MedialaanIE(GigyaBaseIE):
                 'formats': formats,
             }
 
-            api_key = get('vod', 'apiKey')
             channel = get('medialaanGigya', 'channel')
 
             if api_key:
