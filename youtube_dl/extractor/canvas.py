@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import re
 import json
+import codecs
 
 from .common import InfoExtractor
 from .gigya import GigyaBaseIE
@@ -11,7 +12,6 @@ from ..utils import (
     strip_or_none,
     float_or_none,
     int_or_none,
-    merge_dicts,
     parse_iso8601,
     str_or_none,
     url_or_none,
@@ -302,36 +302,26 @@ class VrtNUIE(GigyaBaseIE):
 
         webpage, urlh = self._download_webpage_handle(url, display_id)
 
-        info = self._search_json_ld(webpage, display_id, default={})
+        page_info = self._parse_json(self._search_regex(
+            r'(?ms)<script>\s*digitalData\s*=\s*(.+?);\s*</script>',
+            webpage, 'digitalData', default='{}'), display_id).get('page')
+        title = strip_or_none(page_info.get('page_title'))
 
-        # title is optional here since it may be extracted by extractor
-        # that is delegated from here
-        title = strip_or_none(self._html_search_regex(
-            r'(?ms)<h1 class="content__heading">(.+?)</h1>',
-            webpage, 'title', default=None))
-
+        # Use the long description from the HTML
         description = self._html_search_regex(
-            r'(?ms)<div class="content__description">(.+?)</div>',
+            r'(?ms)<div class="content__description".+?>(.+?)<a',
             webpage, 'description', default=None)
 
-        season = self._html_search_regex(
-            [r'''(?xms)<div\ class="tabs__tab\ tabs__tab--active">\s*
-                    <span>seizoen\ (.+?)</span>\s*
-                </div>''',
-             r'<option value="seizoen (\d{1,3})" data-href="[^"]+?" selected>'],
-            webpage, 'season', default=None)
-
+        season = page_info.get('episode_season')
         season_number = int_or_none(season)
+        episode_number = int_or_none(page_info.get('episode_id'))
 
-        episode_number = int_or_none(self._html_search_regex(
-            r'''(?xms)<div\ class="content__episode">\s*
-                    <abbr\ title="aflevering">afl</abbr>\s*<span>(\d+)</span>
-                </div>''',
-            webpage, 'episode_number', default=None))
+        info_str = self._search_regex(
+            r'(?ms)<script type="application/ld\+json">\s*(.+?)</script>',
+            webpage, 'info', default='{}')
+        info = json.loads(codecs.decode(info_str, 'unicode_escape'), strict=False)
 
-        release_date = parse_iso8601(self._html_search_regex(
-            r'(?ms)<div class="content__broadcastdate">\s*<time\ datetime="(.+?)"',
-            webpage, 'release_date', default=None))
+        release_date = parse_iso8601(info.get("publication")[0].get("startDate"))
 
         # If there's a ? or a # in the URL, remove them and everything after
         clean_url = urlh.geturl().split('?')[0].split('#')[0].strip('/')
@@ -353,7 +343,7 @@ class VrtNUIE(GigyaBaseIE):
         # the first one
         video_id = list(video.values())[0].get('videoid')
 
-        return merge_dicts(info, {
+        return {
             '_type': 'url_transparent',
             'url': 'https://mediazone.vrt.be/api/v1/vrtvideo/assets/%s' % video_id,
             'ie_key': CanvasIE.ie_key(),
@@ -365,4 +355,4 @@ class VrtNUIE(GigyaBaseIE):
             'season_number': season_number,
             'episode_number': episode_number,
             'release_date': release_date,
-        })
+        }
