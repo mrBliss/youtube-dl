@@ -1836,7 +1836,9 @@ class YoutubeDL(object):
                         offset = 0
                         next_offset = 0
                         subtitle_index = 1
-                        sub_filename = subtitles_filename(filename, sub_lang, 'srt')
+                        # I don't want the language suffix, so I don't use
+                        # subtitles_filename
+                        sub_filename = filename.rsplit('.', 1)[0] + '.srt'
 
                         def vtt_timestamp_to_ms(timestamp):
                             (h, m, s, ms) = re.match(r'(\d{2}):(\d{2}):(\d{2}).(\d{3})', timestamp).groups()
