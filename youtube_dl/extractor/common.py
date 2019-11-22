@@ -2584,7 +2584,7 @@ class InfoExtractor(object):
 
     def _extract_wowza_formats(self, url, video_id, m3u8_entry_protocol='m3u8_native', skip_protocols=[]):
         query = compat_urlparse.urlparse(url).query
-        url = re.sub(r'/(?:manifest|playlist|jwplayer)\.(?:m3u8|f4m|mpd|smil)', '', url)
+        url = re.sub(r'/(?:manifest|playlist|jwplayer|index)\.(?:m3u8|f4m|mpd|smil)', '', url)
         mobj = re.search(
             r'(?:(?:http|rtmp|rtsp)(?P<s>s)?:)?(?P<url>//[^?]+)', url)
         url_base = mobj.group('url')

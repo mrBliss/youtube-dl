@@ -1865,22 +1865,38 @@ class YoutubeDL(object):
                                 try:
                                     sub_segment_data = ie._download_webpage(
                                         sub_segment_url, info_dict['id'], note=False)
-                                    for part in sub_segment_data.split('\n\n'):
-                                        if part.startswith('WEBVTT') or not part.strip():
+                                    (start_srt, end_srt, lines) = (None, None, [])
+                                    for line in sub_segment_data.splitlines():
+                                        if line.startswith('WEBVTT') or line.startswith('X-TIMESTAMP') or not line.strip():
                                             continue
-                                        part_lines = part.splitlines()
-                                        (start_vtt, end_vtt) = re.match('([0-9:.,]+) --> ([0-9:.,]+)',
-                                                                        part_lines[0]).groups()
-                                        start = vtt_timestamp_to_ms(start_vtt)
-                                        end = vtt_timestamp_to_ms(end_vtt)
-                                        start += offset
-                                        end += offset
-                                        start_srt = ms_to_srt_timestamp(start)
-                                        end_srt = ms_to_srt_timestamp(end)
+                                        new_entry = re.match('([0-9:.,]+) --> ([0-9:.,]+)', line)
+                                        if new_entry:
+                                            # Write the previous entry
+                                            if start_srt:
+                                                sub_file.write('%d\n' % subtitle_index)
+                                                sub_file.write('%s --> %s\n' % (start_srt, end_srt))
+                                                sub_file.write('%s\n\n' % '\n'.join(lines))
+                                                (start_srt, end_srt, lines) = (None, None, [])
+
+                                            (start_vtt, end_vtt) = new_entry.groups()
+                                            start = vtt_timestamp_to_ms(start_vtt)
+                                            end = vtt_timestamp_to_ms(end_vtt)
+                                            start += offset
+                                            end += offset
+                                            start_srt = ms_to_srt_timestamp(start)
+                                            end_srt = ms_to_srt_timestamp(end)
+                                            subtitle_index += 1
+                                        else:
+                                            # A non-empty line that is not the
+                                            # start of a new entry -> append
+                                            # it to the previous one
+                                            lines.append(line)
+                                    # Write the previous entry
+                                    if start_srt:
                                         sub_file.write('%d\n' % subtitle_index)
                                         sub_file.write('%s --> %s\n' % (start_srt, end_srt))
-                                        sub_file.write('%s\n\n' % '\n'.join(part_lines[1:]))
-                                        subtitle_index += 1
+                                        sub_file.write('%s\n\n' % '\n'.join(lines))
+                                        (start_srt, end_srt, lines) = (None, None, [])
                                     offset += next_offset
                                 except (ExtractorError, IOError, OSError, ValueError) as err:
                                     self.report_warning('Unable to download subtitle segment for "%s": %s' %
