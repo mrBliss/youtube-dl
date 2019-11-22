@@ -307,7 +307,7 @@ class VrtNUIE(GigyaBaseIE):
         webpage, urlh = self._download_webpage_handle(url, display_id)
 
         page_info = self._parse_json(self._search_regex(
-            r'(?ms)<script>\s*digitalData\s*=\s*(.+?);\s*.*</script>',
+            r'(?ms)<script>\s*digitalData\s*=\s*(\{.+?\});\s*.*</script>',
             webpage, 'digitalData', default='{}'), display_id).get('page')
         title = strip_or_none(page_info.get('page_title'))
 
