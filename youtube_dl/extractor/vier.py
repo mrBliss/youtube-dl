@@ -150,21 +150,28 @@ class VierIE(InfoExtractor):
         webpage = self._download_webpage(url, display_id)
 
         video_id = self._search_regex(
-            r'data-file="([a-f0-9-]+)"', webpage, 'video id')
+            r'data-file="([^"]+)"', webpage, 'video id')
 
-        authorization_code = "eyJraWQiOiJCSHZsMjdjNzdGR2J5YWNyTk8xXC9yWXBPTjlzMFFPbjhtUTdzQnA5eCtvbz0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxYzI2MThiNy1lN2VhLTRlN2EtYmRjMy1jNTJmNzUyOWRkM2MiLCJ3ZWJzaXRlIjoie1widXJsXCI6XCJodHRwOlwvXC93d3cudmllci5iZVwvdmlkZW9cL2RlLXNvbGxpY2l0YXRpZVwvMjAxN1wvZGUtc29sbGljaXRhdGllLWFmbGV2ZXJpbmctOFwiLFwic2l0ZU5hbWVcIjpcIlZJRVJcIixcInRpdGxlXCI6XCJEZSBTb2xsaWNpdGF0aWUgLSBBZmxldmVyaW5nIDhcIixcImFjdGlvblwiOlwid2F0Y2hcIn0iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYmlydGhkYXRlIjoiMTJcLzEyXC8xOTEyIiwiZ2VuZGVyIjoibSIsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX2RWaVNzS001WSIsImN1c3RvbTpwb3N0YWxfY29kZSI6IjEwNDMiLCJjb2duaXRvOnVzZXJuYW1lIjoibWVqbzJqYXh4OWo0cW1tOTh2IiwiYXVkIjoiNnMxaDg1MXM4dXBsY281aDZtcWgxamFjOG0iLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTUxMjQwMzUxNSwiZXhwIjoxNTEyNDA3MTE1LCJpYXQiOjE1MTI0MDM1MTUsImVtYWlsIjoiZGV3aW5hbnQrdmllcjJAZ21haWwuY29tIn0.TwMjDcJTIAj1BcNkTm9h1y7NpW1Srsvi0ngAl9LC3XRtBZcigcm8Zl5qsGE1SG8jNoMqS9bWxNNwQ-g_iXe7UVnsyV-OdMluBOodguG4pWC4cRCoNl5Svn--y_v35rJrqy35g16wquCRM21rpBvIMBUw5wyFA_qNIb9tWZeXXxG0ORdVHB9FvPnxXlc0pVuHe-0zMCBZ3U6oFQCpPi0NeiHIx0kFiR3Det6d-QX4FU90j51LGROpjHlIdNv9461o37kX6aOp4zbwLRqGYPokdaufj3w6c0Ajfd2kODEq_yF-dsZEjChrYP93yZZph7osAEGP8UNNnCRq8lACs84D7w"
+        authorization_code = "eyJraWQiOiJCSHZsMjdjNzdGR2J5YWNyTk8xXC9yWXBPTjlzMFFPbjhtUTdzQnA5eCtvbz0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxYzI2MThiNy1lN2VhLTRlN2EtYmRjMy1jNTJmNzUyOWRkM2MiLCJ3ZWJzaXRlIjoie1widXJsXCI6XCJodHRwOlwvXC93d3cudmllci5iZVwvdmlkZW9cL2RlLXNvbGxpY2l0YXRpZVwvMjAxN1wvZGUtc29sbGljaXRhdGllLWFmbGV2ZXJpbmctOFwiLFwic2l0ZU5hbWVcIjpcIlZJRVJcIixcInRpdGxlXCI6XCJEZSBTb2xsaWNpdGF0aWUgLSBBZmxldmVyaW5nIDhcIixcImFjdGlvblwiOlwid2F0Y2hcIn0iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYmlydGhkYXRlIjoiMTJcLzEyXC8xOTEyIiwiZ2VuZGVyIjoibSIsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX2RWaVNzS001WSIsImN1c3RvbTpwb3N0YWxfY29kZSI6IjEwNDMiLCJjb2duaXRvOnVzZXJuYW1lIjoibWVqbzJqYXh4OWo0cW1tOTh2IiwiYXVkIjoiNnMxaDg1MXM4dXBsY281aDZtcWgxamFjOG0iLCJldmVudF9pZCI6IjA0YmEyNTljLTU5YzgtMTFlOS04NjAyLWYzY2U2Yjc1OWI5MCIsInRva2VuX3VzZSI6ImlkIiwiY3VzdG9tOnNlbGxpZ2VudElkIjoiODE0NDQwIiwiYXV0aF90aW1lIjoxNTU0NzA1MTIyLCJleHAiOjE1Njk2ODMwNTgsImlhdCI6MTU2OTY3OTQ1OCwiZW1haWwiOiJkZXdpbmFudCt2aWVyMkBnbWFpbC5jb20ifQ.GXl6Kan4K2rXPYynfJJnGEBjB4AV9mU2NEhjq1-tZb3JxJRQyzcwxLmNKTbZ6uki_7XCBHCNIB5D_I3I2ZnkGdKDfZn0QQ9-qBYRTBSYLkKMucAhYbU3uGfLYjWCXpMJQ9MxXGczEwNcblDvtK6cVp5brvL991DnTchMcdvCkXAhMcKzyPl2nZgh9K3QM7bkuLVuP70NX7QYjshAeusySQPZCGUfRDjhIKCsihF_8gqg5GwxF6fWuOgwZR-zge-9Nii4730PGnR_txyZ8Cg9wA7tvpSU8-ApOimEDjz--PVQtQceGYVOfKu_BAVUzfdyOG70gowsPf2eSWCBj06eqg"
 
         json = self._download_json(
             'https://api.viervijfzes.be/content/%s' % video_id,
             video_id=video_id,
             headers={'authorization': authorization_code})
-
         playlist_url = json['video']['S']
-        duration = int_or_none(json['length']['N'])
+        # duration = int_or_none(json['length']['N'])
 
-        formats = self._extract_wowza_formats(
-            playlist_url, display_id, skip_protocols=['dash'])
+        # playlist_url = video_id
+        duration = None
+
+
+        formats = self._extract_m3u8_formats(
+            playlist_url, display_id)
+        # formats = self._extract_wowza_formats(
+        #     playlist_url, display_id, skip_protocols=['dash'])
         self._sort_formats(formats)
+        print(formats)
+
 
         title = remove_end(self._og_search_title(webpage, default=display_id),
                            " | Vier")
@@ -175,9 +182,10 @@ class VierIE(InfoExtractor):
             webpage, 'description', default=None, group='value')
         thumbnail = self._og_search_property(
             'image:url', webpage, 'thumbnail URL', fatal=False, default=None)
-        upload_date = int_or_none(self._html_search_regex(
-            r'data-timestamp="(\d+)"',
-            webpage, 'upload_date', default=None))
+        # upload_date = int_or_none(self._html_search_regex(
+        #     r'data-timestamp="(\d+)"',
+        #     webpage, 'upload_date', default=None))
+        upload_date = None
 
         series = self._search_regex(
             r'data-program=(["\'])(?P<value>(?:(?!\1).)+)\1', webpage,
