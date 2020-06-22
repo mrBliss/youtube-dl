@@ -9,6 +9,7 @@ from ..utils import (
     urlencode_postdata,
     int_or_none,
     remove_end,
+    unescapeHTML,
 )
 
 
@@ -149,10 +150,23 @@ class VierIE(InfoExtractor):
 
         webpage = self._download_webpage(url, display_id)
 
-        video_id = self._search_regex(
-            r'data-file="([^"]+)"', webpage, 'video id')
+        title = self._og_search_title(webpage)
 
-        authorization_code = "eyJraWQiOiJCSHZsMjdjNzdGR2J5YWNyTk8xXC9yWXBPTjlzMFFPbjhtUTdzQnA5eCtvbz0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxYzI2MThiNy1lN2VhLTRlN2EtYmRjMy1jNTJmNzUyOWRkM2MiLCJ3ZWJzaXRlIjoie1widXJsXCI6XCJodHRwOlwvXC93d3cudmllci5iZVwvdmlkZW9cL2RlLXNvbGxpY2l0YXRpZVwvMjAxN1wvZGUtc29sbGljaXRhdGllLWFmbGV2ZXJpbmctOFwiLFwic2l0ZU5hbWVcIjpcIlZJRVJcIixcInRpdGxlXCI6XCJEZSBTb2xsaWNpdGF0aWUgLSBBZmxldmVyaW5nIDhcIixcImFjdGlvblwiOlwid2F0Y2hcIn0iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYmlydGhkYXRlIjoiMTJcLzEyXC8xOTEyIiwiZ2VuZGVyIjoibSIsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX2RWaVNzS001WSIsImN1c3RvbTpwb3N0YWxfY29kZSI6IjEwNDMiLCJjb2duaXRvOnVzZXJuYW1lIjoibWVqbzJqYXh4OWo0cW1tOTh2IiwiYXVkIjoiNnMxaDg1MXM4dXBsY281aDZtcWgxamFjOG0iLCJldmVudF9pZCI6IjA0YmEyNTljLTU5YzgtMTFlOS04NjAyLWYzY2U2Yjc1OWI5MCIsInRva2VuX3VzZSI6ImlkIiwiY3VzdG9tOnNlbGxpZ2VudElkIjoiODE0NDQwIiwiYXV0aF90aW1lIjoxNTU0NzA1MTIyLCJleHAiOjE1Njk2ODMwNTgsImlhdCI6MTU2OTY3OTQ1OCwiZW1haWwiOiJkZXdpbmFudCt2aWVyMkBnbWFpbC5jb20ifQ.GXl6Kan4K2rXPYynfJJnGEBjB4AV9mU2NEhjq1-tZb3JxJRQyzcwxLmNKTbZ6uki_7XCBHCNIB5D_I3I2ZnkGdKDfZn0QQ9-qBYRTBSYLkKMucAhYbU3uGfLYjWCXpMJQ9MxXGczEwNcblDvtK6cVp5brvL991DnTchMcdvCkXAhMcKzyPl2nZgh9K3QM7bkuLVuP70NX7QYjshAeusySQPZCGUfRDjhIKCsihF_8gqg5GwxF6fWuOgwZR-zge-9Nii4730PGnR_txyZ8Cg9wA7tvpSU8-ApOimEDjz--PVQtQceGYVOfKu_BAVUzfdyOG70gowsPf2eSWCBj06eqg"
+        data_hero = self._parse_json(
+            self._search_regex(
+                r'data-hero\s*=\s*"(.+?)">',
+                webpage,
+                'data-hero',
+                default='{}'),
+            video_id,
+            transform_source=unescapeHTML)
+        episode = [episode
+                   for playlist in data_hero.get('data').get('playlists')
+                   for episode in playlist.get('episodes')
+                   if episode.get('title') == title][0]
+        video_id = episode.get('videoUuid')
+
+        authorization_code = "eyJraWQiOiJCSHZsMjdjNzdGR2J5YWNyTk8xXC9yWXBPTjlzMFFPbjhtUTdzQnA5eCtvbz0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxYzI2MThiNy1lN2VhLTRlN2EtYmRjMy1jNTJmNzUyOWRkM2MiLCJ3ZWJzaXRlIjoie1widXJsXCI6XCJodHRwOlwvXC93d3cudmllci5iZVwvdmlkZW9cL2RlLXNvbGxpY2l0YXRpZVwvMjAxN1wvZGUtc29sbGljaXRhdGllLWFmbGV2ZXJpbmctOFwiLFwic2l0ZU5hbWVcIjpcIlZJRVJcIixcInRpdGxlXCI6XCJEZSBTb2xsaWNpdGF0aWUgLSBBZmxldmVyaW5nIDhcIixcImFjdGlvblwiOlwid2F0Y2hcIn0iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYmlydGhkYXRlIjoiMTJcLzEyXC8xOTEyIiwiZ2VuZGVyIjoibSIsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX2RWaVNzS001WSIsImN1c3RvbTpwb3N0YWxfY29kZSI6IjEwNDMiLCJjb2duaXRvOnVzZXJuYW1lIjoibWVqbzJqYXh4OWo0cW1tOTh2IiwiYXVkIjoiNnMxaDg1MXM4dXBsY281aDZtcWgxamFjOG0iLCJldmVudF9pZCI6IjM1Mzg4ZTMwLTFhMTAtNGY2ZC05NmY4LWY1NDcxYjJhNWUzNyIsInRva2VuX3VzZSI6ImlkIiwiY3VzdG9tOnNlbGxpZ2VudElkIjoiODE0NDQwIiwiYXV0aF90aW1lIjoxNTgxMzU2OTE2LCJleHAiOjE1OTE0NDI2MjYsImlhdCI6MTU5MTQzOTAyNiwiZW1haWwiOiJkZXdpbmFudCt2aWVyMkBnbWFpbC5jb20ifQ.h6Y8ce5WoMUJN1SDZfX7NXIvWFuMOxDqSqXgdPisBrGkuMKeVphe3rQ1D0M1pQGnqF-Rch9EUHGL9UbtYkzigMgvEpepSc_8pVuJ1py_EhuVNZhvweMbZiz7q-xikvXrqnudog50XzG1zGWNBXfHN0rx8Q9wKojYyfsOO8-BbP6lYQvGl7Zav23-kOnygKEJ7oCQix-uXo5fzS4HMazcaj0jIcdDuwZUpgOqRzBlpkSFQ7zkd3x3RIxJDk_wzuMPN_6AyNVCw8YY-qkPvW1CTYQGp0q14gLMdwAhCN90Yq6cUyY8ouBYerSh4IOmguBNhczZBrXgzF2yKaTla-Ao1Q"
 
         json = self._download_json(
             'https://api.viervijfzes.be/content/%s' % video_id,
